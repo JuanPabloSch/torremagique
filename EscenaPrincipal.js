@@ -124,80 +124,40 @@ class EscenaPrincipal extends Phaser.Scene {
         });
     }
 
-    update() {
-        this.actualizarBarraVida();
+update() {
+    this.actualizarBarraVida();
 
-        // CÁLCULO DE METROS (Una sola declaración limpia)
-        if (this.jugador.y < this.alturaMaximaAlcanzada) {
-            this.alturaMaximaAlcanzada = this.jugador.y; 
-        }
-        let metrosEscalados = Math.floor((9800 - this.alturaMaximaAlcanzada) / 10);
-        this.textoAltura.setText('ALTURA: ' + metrosEscalados + 'm');
-
-        if (metrosEscalados > this.recordGuardado) {
-            this.recordGuardado = metrosEscalados;
-            this.textoRecord.setText('RÉCORD: ' + this.recordGuardado + 'm');
-            localStorage.setItem('torre_max_record', this.recordGuardado);
-        }
-
-        // JUGADOR (Invocamos nuestra clase personalizada)
-        this.jugador = new Jugador(this, 400, 9800);
-
-        // Fondo
-        if (this.jugador.body.velocity.y !== 0) {
-            this.lineasFondo.y -= this.jugador.body.velocity.y * 0.002;
-        }
-        this.lineasFondo.y = this.lineasFondo.y % 150;
-
-        // IA enemigos
-        this.enemigos.children.iterate((enemigo) => {
-            if (!enemigo) return;
-
-            let diferenciaY = Math.abs(enemigo.y - this.jugador.y);
-
-            if (diferenciaY < 40) {
-                enemigo.body.setVelocityX(0);
-
-                if (!enemigo.ultimoDisparo || this.time.now - enemigo.ultimoDisparo > 1500) {
-                    enemigo.ultimoDisparo = this.time.now;
-
-                    let bala = this.add.rectangle(enemigo.x, enemigo.y, 10, 10, 0xff0000);
-                    this.balasEnemigas.add(bala); 
-                    
-                    let direccionBala = (this.jugador.x < enemigo.x) ? -350 : 350;
-                    bala.body.setVelocityX(direccionBala);
-                }
-            } else {
-                if (enemigo.body.velocity.x === 0) {
-                    enemigo.body.setVelocityX(enemigo.direccionBase || 100);
-                }
-
-                let seVaACaer = !enemigo.body.touching.down;
-                let chocoPared = enemigo.body.blocked.left || enemigo.body.blocked.right;
-
-                if (chocoPared || seVaACaer) {
-                    let nuevaVel = enemigo.body.velocity.x > 0 ? -100 : 100;
-                    enemigo.body.setVelocityX(nuevaVel);
-                    enemigo.direccionBase = nuevaVel; 
-                    if (seVaACaer) {
-                        enemigo.x += nuevaVel > 0 ? 5 : -5;
-                    }
-                }
-            }
-        });
+    // Lógica de metros y récord
+    if (this.jugador.y < this.alturaMaximaAlcanzada) {
+        this.alturaMaximaAlcanzada = this.jugador.y; 
     }
+    let metrosEscalados = Math.floor((9800 - this.alturaMaximaAlcanzada) / 10);
+    this.textoAltura.setText('ALTURA: ' + metrosEscalados + 'm');
+
+    if (metrosEscalados > this.recordGuardado) {
+        this.recordGuardado = metrosEscalados;
+        this.textoRecord.setText('RÉCORD: ' + this.recordGuardado + 'm');
+        localStorage.setItem('torre_max_record', this.recordGuardado);
+    }
+
+    // Efecto de fondo parallax
+    if (this.jugador.body.velocity.y !== 0) {
+        this.lineasFondo.y -= this.jugador.body.velocity.y * 0.002;
+    }
+    this.lineasFondo.y = this.lineasFondo.y % 150;
+
+    // ACTUALIZACIÓN DE MIS ENTIERROS/OBJETOS MODULARES
+    this.jugador.update();
+
+    this.enemigos.children.iterate((enemigo) => {
+        if (enemigo) enemigo.update();
+    });
+}
 
     crearEnemigo(x, y) {
-        let enemigo = this.add.rectangle(x, y - 32, 24, 24, 0xff0000);
-        this.physics.add.existing(enemigo, false); 
-        enemigo.body.setCollideWorldBounds(true);
-        
-        let velInicial = Math.random() < 0.5 ? 100 : -100;
-        enemigo.body.setVelocityX(velInicial);
-        enemigo.direccionBase = velInicial; 
-        
-        this.enemigos.add(enemigo);
-    }
+    let enemigo = new Enemigo(this, x, y);
+    this.enemigos.add(enemigo);
+}
 
     destruirEnemigo(poder, enemigo) {
         poder.destroy();   
