@@ -55,22 +55,18 @@ class EscenaPrincipal extends Phaser.Scene {
         this.textoRecord.setScrollFactor(0);
         this.textoRecord.setDepth(11);
 
-        // GRUPOS
+        // GRUPOS ORIGINALES (SIN EL GRUPO DE CURACIONES)
         this.plataformas = this.physics.add.staticGroup();
         this.poderes = this.physics.add.group({ allowGravity: false }); 
         this.balasEnemigas = this.physics.add.group({ allowGravity: false }); 
         this.enemigos = this.physics.add.group(); 
-        // Adentro de create(), donde declarás los otros grupos:
-        this.balasEnemigas = this.physics.add.group({ allowGravity: false }); 
-        this.enemigos = this.physics.add.group(); 
-        this.curaciones = this.physics.add.group({ allowGravity: false }); // <--- NUEVO
 
         // Suelo Base
         let sueloBase = this.add.rectangle(400, 9950, 800, 32, 0x00ff00);
         this.plataformas.add(sueloBase);
         sueloBase.body.updateFromGameObject();
 
-        // GENERADOR DE TORRE
+        // GENERADOR DE TORRE (Creamos las curaciones sueltas en la escena)
         for (let altoY = 9650; altoY > 200; altoY -= 300) {
             let esPartida = Math.random() < 0.5;
 
@@ -83,9 +79,19 @@ class EscenaPrincipal extends Phaser.Scene {
                 parteDerecha.body.updateFromGameObject();
 
                 if (Math.random() < 0.6) {
-                    let xEnemigo = Math.random() < 0.5 ? Phaser.Math.Between(50, 230) : Phaser.Math.Between(570, 750);
-                    this.crearEnemigo(xEnemigo, altoY);
-                }
+                let xEnemigo = Math.random() < 0.5 ? Phaser.Math.Between(50, 230) : Phaser.Math.Between(570, 750);
+                this.crearEnemigo(xEnemigo, altoY);
+            } else if (Math.random() < 1.0) { // <--- CAMBIADO A 1.0 (Antes 0.3)
+                let xCura = Math.random() < 0.5 ? Phaser.Math.Between(50, 230) : Phaser.Math.Between(570, 750);
+                
+                let cura = this.add.rectangle(xCura, altoY - 25, 14, 14, 0x00ffff);
+                this.physics.add.existing(cura, true);
+                
+                this.physics.add.overlap(this.jugador, cura, () => {
+                    this.vidaActual = Math.min(this.vidaMaxima, this.vidaActual + 20);
+                    cura.destroy();
+                });
+            }
             } else {
                 let xAleatoria = Phaser.Math.Between(300, 500);
                 let pisoNormal = this.add.rectangle(xAleatoria, altoY, 450, 32, 0x00ff00);
@@ -94,17 +100,25 @@ class EscenaPrincipal extends Phaser.Scene {
                 pisoNormal.body.updateFromGameObject();
 
                 if (Math.random() < 0.7) {
-                    this.crearEnemigo(xAleatoria, altoY);
-                }
+                this.crearEnemigo(xAleatoria, altoY);
+            } else if (Math.random() < 1.0) { // <--- CAMBIADO A 1.0 (Antes 0.3)
+                let cura = this.add.rectangle(xAleatoria, altoY - 25, 14, 14, 0x00ffff);
+                this.physics.add.existing(cura, true);
+                
+                this.physics.add.overlap(this.jugador, cura, () => {
+                    this.vidaActual = Math.min(this.vidaMaxima, this.vidaActual + 20);
+                    cura.destroy();
+                });
+            }
             }
         }
 
-        // COLISIONES
+        // COLISIONES ORIGINALES
         this.physics.add.collider(this.jugador, this.plataformas);
         this.physics.add.collider(this.enemigos, this.plataformas); 
         
-        this.physics.add.collider(this.poderes, this.plataformas, (bala) => bofetadaBala(bala));
-        this.physics.add.collider(this.balasEnemigas, this.plataformas, (bala) => bofetadaBala(bala));
+        this.physics.add.collider(this.poderes, this.plataformas, (bala) => { bala.destroy(); });
+        this.physics.add.collider(this.balasEnemigas, this.plataformas, (bala) => { bala.destroy(); });
 
         this.physics.add.overlap(this.poderes, this.enemigos, this.destruirEnemigo, null, this);
         this.physics.add.overlap(this.jugador, this.enemigos, this.recibirDanio, null, this);
@@ -124,40 +138,37 @@ class EscenaPrincipal extends Phaser.Scene {
         });
     }
 
-update() {
-    this.actualizarBarraVida();
+    update() {
+        this.actualizarBarraVida();
 
-    // Lógica de metros y récord
-    if (this.jugador.y < this.alturaMaximaAlcanzada) {
-        this.alturaMaximaAlcanzada = this.jugador.y; 
+        if (this.jugador.y < this.alturaMaximaAlcanzada) {
+            this.alturaMaximaAlcanzada = this.jugador.y; 
+        }
+        let metrosEscalados = Math.floor((9800 - this.alturaMaximaAlcanzada) / 10);
+        this.textoAltura.setText('ALTURA: ' + metrosEscalados + 'm');
+
+        if (metrosEscalados > this.recordGuardado) {
+            this.recordGuardado = metrosEscalados;
+            this.textoRecord.setText('RÉCORD: ' + this.recordGuardado + 'm');
+            localStorage.setItem('torre_max_record', this.recordGuardado);
+        }
+
+        if (this.jugador.body.velocity.y !== 0) {
+            this.lineasFondo.y -= this.jugador.body.velocity.y * 0.002;
+        }
+        this.lineasFondo.y = this.lineasFondo.y % 150;
+
+        this.jugador.update();
+
+        this.enemigos.children.iterate((enemigo) => {
+            if (enemigo) enemigo.update();
+        });
     }
-    let metrosEscalados = Math.floor((9800 - this.alturaMaximaAlcanzada) / 10);
-    this.textoAltura.setText('ALTURA: ' + metrosEscalados + 'm');
-
-    if (metrosEscalados > this.recordGuardado) {
-        this.recordGuardado = metrosEscalados;
-        this.textoRecord.setText('RÉCORD: ' + this.recordGuardado + 'm');
-        localStorage.setItem('torre_max_record', this.recordGuardado);
-    }
-
-    // Efecto de fondo parallax
-    if (this.jugador.body.velocity.y !== 0) {
-        this.lineasFondo.y -= this.jugador.body.velocity.y * 0.002;
-    }
-    this.lineasFondo.y = this.lineasFondo.y % 150;
-
-    // ACTUALIZACIÓN DE MIS ENTIERROS/OBJETOS MODULARES
-    this.jugador.update();
-
-    this.enemigos.children.iterate((enemigo) => {
-        if (enemigo) enemigo.update();
-    });
-}
 
     crearEnemigo(x, y) {
-    let enemigo = new Enemigo(this, x, y);
-    this.enemigos.add(enemigo);
-}
+        let enemigo = new Enemigo(this, x, y);
+        this.enemigos.add(enemigo);
+    }
 
     destruirEnemigo(poder, enemigo) {
         poder.destroy();   
@@ -197,20 +208,8 @@ update() {
     }
 
     recibirDanioBala(jugador, bala) {
-        let balaX = bala.x;
+        this.vidaActual -= 25; 
+        this.verificarMuerte();
         bala.destroy(); 
-        
-        // Le avisamos al objeto jugador que sufra daño (Le pasamos 25 de daño y la X de la bala)
-        jugador.recibirDanio(25, balaX);
     }
-
-    recogerCuracion(jugador, cura) {
-        cura.destroy(); 
-        
-        // Le avisamos al jugador que se cure 20 puntos
-        jugador.recogerCuracion(20);
-    }}
-
-function bofetadaBala(bala) {
-    bala.destroy();
 }
