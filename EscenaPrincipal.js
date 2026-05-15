@@ -62,6 +62,10 @@ class EscenaPrincipal extends Phaser.Scene {
         this.poderes = this.physics.add.group({ allowGravity: false }); 
         this.balasEnemigas = this.physics.add.group({ allowGravity: false }); 
         this.enemigos = this.physics.add.group(); 
+        // Adentro de create(), donde declarás los otros grupos:
+        this.balasEnemigas = this.physics.add.group({ allowGravity: false }); 
+        this.enemigos = this.physics.add.group(); 
+        this.curaciones = this.physics.add.group({ allowGravity: false }); // <--- NUEVO
 
         // Suelo Base
         let sueloBase = this.add.rectangle(400, 9950, 800, 32, 0x00ff00);
