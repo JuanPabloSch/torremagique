@@ -5,13 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Testeo de Torre - Phaser</title>
 
-    <!-- 1. Importamos la librería de Phaser desde el CDN -->
+<!-- Primero Phaser -->
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser-arcade-physics.min.js"></script>
 
-    <!-- 2. Importamos la lógica de la escena primero -->
+    <!-- NUEVO: El molde del jugador -->
+    <script src="Jugador.js"></script>
+
+    <!-- Tercero: El escenario que ahora va a usar al Jugador -->
     <script src="EscenaPrincipal.js"></script>
 
-    <!-- 3. Importamos el archivo que inicializa el juego (crea el "new Phaser.Game") -->
+    <!-- Cuarto: El iniciador -->
     <script src="juego.js"></script>
 </head>
 <body>

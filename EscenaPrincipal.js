@@ -26,10 +26,8 @@ class EscenaPrincipal extends Phaser.Scene {
         this.lineasFondo.setScrollFactor(0); 
         this.lineasFondo.setDepth(-1);       
 
-        // JUGADOR
-        this.jugador = this.add.rectangle(400, 9800, 32, 32, 0x0000ff);
-        this.physics.add.existing(this.jugador, false); 
-        this.jugador.body.setCollideWorldBounds(true);   
+        // JUGADOR (Invocamos nuestra clase personalizada)
+        this.jugador = new Jugador(this, 400, 9800);
 
         // INTERFAZ DE VIDA
         this.interfazVida = this.add.graphics();
@@ -142,31 +140,8 @@ class EscenaPrincipal extends Phaser.Scene {
             localStorage.setItem('torre_max_record', this.recordGuardado);
         }
 
-        // Controles jugador
-        if (this.teclas.left.isDown) {
-            this.jugador.body.setVelocityX(-200);
-        } else if (this.teclas.right.isDown) {
-            this.jugador.body.setVelocityX(200);
-        } else {
-            this.jugador.body.setVelocityX(0);
-        }
-
-        if (this.teclas.up.isDown && this.jugador.body.touching.down) {
-            this.jugador.body.setVelocityY(-650); 
-        }
-
-        // Muerte por caída libre
-        if (this.jugador.body.velocity.y > 0 && !this.jugadorCayendo) {
-            this.jugadorCayendo = true;
-            this.alturaInicioCaida = this.jugador.y;
-        }
-        if (this.jugador.body.touching.down && this.jugadorCayendo) {
-            let distanciaCaida = this.jugador.y - this.alturaInicioCaida;
-            if (distanciaCaida > 850) {
-                this.scene.restart(); 
-            }
-            this.jugadorCayendo = false;
-        }
+        // JUGADOR (Invocamos nuestra clase personalizada)
+        this.jugador = new Jugador(this, 400, 9800);
 
         // Fondo
         if (this.jugador.body.velocity.y !== 0) {
@@ -264,20 +239,17 @@ class EscenaPrincipal extends Phaser.Scene {
     recibirDanioBala(jugador, bala) {
         let balaX = bala.x;
         bala.destroy(); 
-
-        this.vidaActual -= 25; 
-        this.verificarMuerte();
-
-        jugador.body.setVelocityY(-250);
-        if (jugador.x < balaX) {
-            jugador.body.setVelocityX(-300);
-        } else {
-            jugador.body.setVelocityX(300);
-        }
-        jugador.setFillStyle(0xffffff);
-        this.time.delayedCall(150, () => { jugador.setFillStyle(0x0000ff); });
+        
+        // Le avisamos al objeto jugador que sufra daño (Le pasamos 25 de daño y la X de la bala)
+        jugador.recibirDanio(25, balaX);
     }
-}
+
+    recogerCuracion(jugador, cura) {
+        cura.destroy(); 
+        
+        // Le avisamos al jugador que se cure 20 puntos
+        jugador.recogerCuracion(20);
+    }}
 
 function bofetadaBala(bala) {
     bala.destroy();
