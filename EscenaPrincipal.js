@@ -10,12 +10,13 @@ class EscenaPrincipal extends Phaser.Scene {
         this.physics.world.setBounds(0, 0, 800, 10000);
         this.cameras.main.setBounds(0, 0, 800, 10000);
 
-        // Sistema de vida, caídas y altura
+        // Sistema de juego
         this.vidaMaxima = 100;
         this.vidaActual = 100;
         this.jugadorCayendo = false;
         this.alturaInicioCaida = 0;
         this.alturaMaximaAlcanzada = 9800; 
+        this.enemigosBajas = 0; 
 
         // FONDO
         this.lineasFondo = this.add.graphics();
@@ -26,14 +27,13 @@ class EscenaPrincipal extends Phaser.Scene {
         this.lineasFondo.setScrollFactor(0); 
         this.lineasFondo.setDepth(-1);       
 
-        // JUGADOR (Invocamos nuestra clase personalizada)
+        // JUGADOR
         this.jugador = new Jugador(this, 400, 9800);
 
-        // INTERFAZ DE VIDA
+        // INTERFAZ
         this.interfazVida = this.add.graphics();
         this.interfazVida.setDepth(10); 
 
-        // INTERFAZ DE TEXTOS (ALTURA Y RÉCORD)
         this.textoAltura = this.add.text(20, 20, 'ALTURA: 0m', {
             fontFamily: 'Arial',
             fontSize: '24px',
@@ -43,7 +43,6 @@ class EscenaPrincipal extends Phaser.Scene {
         this.textoAltura.setScrollFactor(0);
         this.textoAltura.setDepth(11);
 
-        // Leer récord del almacenamiento local del navegador
         this.recordGuardado = localStorage.getItem('torre_max_record') ? parseInt(localStorage.getItem('torre_max_record')) : 0;
 
         this.textoRecord = this.add.text(20, 50, 'RÉCORD: ' + this.recordGuardado + 'm', {
@@ -55,7 +54,16 @@ class EscenaPrincipal extends Phaser.Scene {
         this.textoRecord.setScrollFactor(0);
         this.textoRecord.setDepth(11);
 
-        // GRUPOS ORIGINALES (SIN EL GRUPO DE CURACIONES)
+        this.textoBajas = this.add.text(580, 20, 'KILLS: 0', {
+            fontFamily: 'Arial',
+            fontSize: '24px',
+            fontWeight: 'bold',
+            fill: '#ff3333'
+        });
+        this.textoBajas.setScrollFactor(0);
+        this.textoBajas.setDepth(11);
+
+        // GRUPOS
         this.plataformas = this.physics.add.staticGroup();
         this.poderes = this.physics.add.group({ allowGravity: false }); 
         this.balasEnemigas = this.physics.add.group({ allowGravity: false }); 
@@ -66,7 +74,7 @@ class EscenaPrincipal extends Phaser.Scene {
         this.plataformas.add(sueloBase);
         sueloBase.body.updateFromGameObject();
 
-        // GENERADOR DE TORRE (Creamos las curaciones sueltas en la escena)
+        // GENERADOR DE TORRE (Ahora decide qué tipo de enemigo poner)
         for (let altoY = 9650; altoY > 200; altoY -= 300) {
             let esPartida = Math.random() < 0.5;
 
@@ -79,19 +87,22 @@ class EscenaPrincipal extends Phaser.Scene {
                 parteDerecha.body.updateFromGameObject();
 
                 if (Math.random() < 0.6) {
-                let xEnemigo = Math.random() < 0.5 ? Phaser.Math.Between(50, 230) : Phaser.Math.Between(570, 750);
-                this.crearEnemigo(xEnemigo, altoY);
-            } else if (Math.random() < 1.0) { // <--- CAMBIADO A 1.0 (Antes 0.3)
-                let xCura = Math.random() < 0.5 ? Phaser.Math.Between(50, 230) : Phaser.Math.Between(570, 750);
-                
-                let cura = this.add.rectangle(xCura, altoY - 25, 14, 14, 0x00ffff);
-                this.physics.add.existing(cura, true);
-                
-                this.physics.add.overlap(this.jugador, cura, () => {
-                    this.vidaActual = Math.min(this.vidaMaxima, this.vidaActual + 20);
-                    cura.destroy();
-                });
-            }
+                    let xEnemigo = Math.random() < 0.5 ? Phaser.Math.Between(50, 230) : Phaser.Math.Between(570, 750);
+                    // 50% de chance de que sea torreta inteligente en plataformas partidas
+                    if (Math.random() < 0.5) {
+                        this.crearTorreta(xEnemigo, altoY);
+                    } else {
+                        this.crearEnemigo(xEnemigo, altoY);
+                    }
+                } else if (Math.random() < 1.0) { 
+                    let xCura = Math.random() < 0.5 ? Phaser.Math.Between(50, 230) : Phaser.Math.Between(570, 750);
+                    let cura = this.add.rectangle(xCura, altoY - 25, 14, 14, 0x00ffff);
+                    this.physics.add.existing(cura, true);
+                    this.physics.add.overlap(this.jugador, cura, () => {
+                        this.vidaActual = Math.min(this.vidaMaxima, this.vidaActual + 20);
+                        cura.destroy();
+                    });
+                }
             } else {
                 let xAleatoria = Phaser.Math.Between(300, 500);
                 let pisoNormal = this.add.rectangle(xAleatoria, altoY, 450, 32, 0x00ff00);
@@ -100,20 +111,24 @@ class EscenaPrincipal extends Phaser.Scene {
                 pisoNormal.body.updateFromGameObject();
 
                 if (Math.random() < 0.7) {
-                this.crearEnemigo(xAleatoria, altoY);
-            } else if (Math.random() < 1.0) { // <--- CAMBIADO A 1.0 (Antes 0.3)
-                let cura = this.add.rectangle(xAleatoria, altoY - 25, 14, 14, 0x00ffff);
-                this.physics.add.existing(cura, true);
-                
-                this.physics.add.overlap(this.jugador, cura, () => {
-                    this.vidaActual = Math.min(this.vidaMaxima, this.vidaActual + 20);
-                    cura.destroy();
-                });
-            }
+                    // 40% de chance de que sea torreta inteligente en pisos largos
+                    if (Math.random() < 0.4) {
+                        this.crearTorreta(xAleatoria, altoY);
+                    } else {
+                        this.crearEnemigo(xAleatoria, altoY);
+                    }
+                } else if (Math.random() < 1.0) { 
+                    let cura = this.add.rectangle(xAleatoria, altoY - 25, 14, 14, 0x00ffff);
+                    this.physics.add.existing(cura, true);
+                    this.physics.add.overlap(this.jugador, cura, () => {
+                        this.vidaActual = Math.min(this.vidaMaxima, this.vidaActual + 20);
+                        cura.destroy();
+                    });
+                }
             }
         }
 
-        // COLISIONES ORIGINALES
+        // COLISIONES
         this.physics.add.collider(this.jugador, this.plataformas);
         this.physics.add.collider(this.enemigos, this.plataformas); 
         
@@ -170,9 +185,19 @@ class EscenaPrincipal extends Phaser.Scene {
         this.enemigos.add(enemigo);
     }
 
+    // NUEVO MÉTODO: Instancia la torreta y la mete al mismo grupo de enemigos 
+    // para que tus balas también la puedan destruir y sume al contador de bajas
+    crearTorreta(x, y) {
+        let torreta = new EnemigoTorreta(this, x, y);
+        this.enemigos.add(torreta);
+    }
+
     destruirEnemigo(poder, enemigo) {
         poder.destroy();   
         enemigo.destroy(); 
+
+        this.enemigosBajas += 1;
+        this.textoBajas.setText('KILLS: ' + this.enemigosBajas);
     }
 
     actualizarBarraVida() {
