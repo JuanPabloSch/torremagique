@@ -74,7 +74,7 @@ class EscenaPrincipal extends Phaser.Scene {
         this.plataformas.add(sueloBase);
         sueloBase.body.updateFromGameObject();
 
-        // GENERADOR DE TORRE (Ahora reparte entre los 4 tipos de enemigos)
+        // GENERADOR DE TORRE (Llamadas limpias usando las clases externas)
         for (let altoY = 9650; altoY > 200; altoY -= 300) {
             let esPartida = Math.random() < 0.5;
 
@@ -88,17 +88,7 @@ class EscenaPrincipal extends Phaser.Scene {
 
                 if (Math.random() < 0.6) {
                     let xEnemigo = Math.random() < 0.5 ? Phaser.Math.Between(50, 230) : Phaser.Math.Between(570, 750);
-                    
-                    let azar = Math.random();
-                    if (azar < 0.25) {
-                        this.crearTorretaDirecta(xEnemigo, altoY);
-                    } else if (azar < 0.50) {
-                        this.crearKamikazeDirecto(xEnemigo, altoY); 
-                    } else if (azar < 0.75) {
-                        this.crearLanzallamasDirecto(xEnemigo, altoY); // <--- NUEVO
-                    } else {
-                        this.crearEnemigo(xEnemigo, altoY);
-                    }
+                    this.invocarEnemigoAleatorio(xEnemigo, altoY);
                 } else if (Math.random() < 1.0) { 
                     let xCura = Math.random() < 0.5 ? Phaser.Math.Between(50, 230) : Phaser.Math.Between(570, 750);
                     let cura = this.add.rectangle(xCura, altoY - 25, 14, 14, 0x00ffff);
@@ -116,16 +106,7 @@ class EscenaPrincipal extends Phaser.Scene {
                 pisoNormal.body.updateFromGameObject();
 
                 if (Math.random() < 0.7) {
-                    let azar = Math.random();
-                    if (azar < 0.25) {
-                        this.crearTorretaDirecta(xAleatoria, altoY);
-                    } else if (azar < 0.50) {
-                        this.crearKamikazeDirecto(xAleatoria, altoY);
-                    } else if (azar < 0.75) {
-                        this.crearLanzallamasDirecto(xAleatoria, altoY); // <--- NUEVO
-                    } else {
-                        this.crearEnemigo(xAleatoria, altoY);
-                    }
+                    this.invocarEnemigoAleatorio(xAleatoria, altoY);
                 } else if (Math.random() < 1.0) { 
                     let cura = this.add.rectangle(xAleatoria, altoY - 25, 14, 14, 0x00ffff);
                     this.physics.add.existing(cura, true);
@@ -191,129 +172,22 @@ class EscenaPrincipal extends Phaser.Scene {
         });
     }
 
-    crearEnemigo(x, y) {
-        let enemigo = new Enemigo(this, x, y);
-        this.enemigos.add(enemigo);
-    }
+    // Sistema limpio para decidir qué clase instanciar
+    invocarEnemigoAleatorio(x, y) {
+        let azar = Math.random();
+        let nuevoEnemigo;
 
-    crearTorretaDirecta(x, y) {
-        let torreta = this.add.rectangle(x, y - 30, 30, 30, 0xff00ff);
-        this.enemigos.add(torreta);
-        this.physics.add.existing(torreta);
-        
-        torreta.body.setAllowGravity(false); 
-        torreta.body.setImmovable(true);     
-        torreta.body.setCollideWorldBounds(true);
+        if (azar < 0.25) {
+            nuevoEnemigo = new EnemigoTorreta(this, x, y);
+        } else if (azar < 0.50) {
+            nuevoEnemigo = new EnemigoKamikaze(this, x, y);
+        } else if (azar < 0.75) {
+            nuevoEnemigo = new EnemigoLanzallamas(this, x, y);
+        } else {
+            nuevoEnemigo = new Enemigo(this, x, y);
+        }
 
-        let reloj = this.time.addEvent({
-            delay: 1000, // Cada 1 segundo
-            loop: true,
-            callback: () => {
-                if (!torreta.active || !this.jugador || !this.jugador.active) {
-                    reloj.destroy();
-                    return;
-                }
-                let bala = this.add.rectangle(torreta.x, torreta.y, 10, 10, 0xff0000);
-                this.balasEnemigas.add(bala);
-                this.physics.moveToObject(bala, this.jugador, 300);
-            }
-        });
-    }
-
-    crearKamikazeDirecto(x, y) {
-        let kamikaze = this.add.rectangle(x, y - 25, 22, 22, 0xffff00); 
-        this.enemigos.add(kamikaze);
-        this.physics.add.existing(kamikaze);
-        kamikaze.body.setCollideWorldBounds(true);
-        kamikaze.body.setAllowGravity(false); 
-        
-        kamikaze.esKamikaze = true;
-        kamikaze.cargando = false;
-
-        kamikaze.update = () => {
-            if (!kamikaze.active || !this.jugador || !this.jugador.active) return;
-
-            let distancia = Phaser.Math.Distance.Between(kamikaze.x, kamikaze.y, this.jugador.x, this.jugador.y);
-
-            if (distancia < 450 || kamikaze.cargando) {
-                kamikaze.cargando = true;
-                this.physics.moveToObject(kamikaze, this.jugador, 280);
-                
-                if (this.time.now % 200 < 100) {
-                    kamikaze.setFillStyle(0xff0000);
-                } else {
-                    kamikaze.setFillStyle(0xffff00);
-                }
-            } else {
-                kamikaze.body.setVelocity(0, 0);
-            }
-        };
-    }
-
-    // NUEVO MÉTODO DIRECTO: El enemigo Lanzallamas (Bordó)
-// MÉTODO LANZALLAMAS CORREGIDO (Sin errores de tipeo y con físicas reales)
-    crearLanzallamasDirecto(x, y) {
-        let pyromaniac = this.add.rectangle(x, y - 30, 28, 28, 0x990000); // Bordó
-        this.enemigos.add(pyromaniac);
-        this.physics.add.existing(pyromaniac);
-        
-        // Físicas terrestres obligatorias
-        pyromaniac.body.setCollideWorldBounds(true);
-        pyromaniac.body.setGravityY(300); // ◄--- Tiene gravedad, cae a las plataformas
-        
-        // Hacemos que colisione con el suelo para que no lo atraviese
-        this.physics.add.collider(pyromaniac, this.plataformas);
-
-        // Propiedades de patrullaje
-        pyromaniac.velocidadPatrulla = 80;
-        pyromaniac.body.setVelocityX(pyromaniac.velocidadPatrulla);
-
-        // Reloj rápido de fuego continuo
-        let relojFuego = this.time.addEvent({
-            delay: 100,
-            loop: true,
-            callback: () => {
-                if (!pyromaniac.active) {
-                    relojFuego.destroy();
-                    return;
-                }
-
-                let direccionX = pyromaniac.body.velocity.x > 0 ? 1 : -1;
-                let colorFuego = Math.random() < 0.5 ? 0xff6600 : 0xff3300;
-                let flama = this.add.rectangle(pyromaniac.x + (direccionX * 15), pyromaniac.y, 8, 8, colorFuego);
-                this.balasEnemigas.add(flama);
-
-                flama.body.setVelocityX(pyromaniac.body.velocity.x + (direccionX * 250));
-                flama.body.setVelocityY(Phaser.Math.Between(-40, 40));
-
-                this.time.delayedCall(400, () => {
-                    if (flama.active) flama.destroy();
-                });
-            }
-        });
-
-        // Lógica de patrullaje e inteligencia para no flotar ni caerse solo
-        pyromaniac.update = () => {
-            if (!pyromaniac.active || !pyromaniac.body) return;
-
-            // Si choca contra una pared del mundo o el borde de la pantalla, da la vuelta (CORREGIDO EL TYPO)
-            if (pyromaniac.body.blocked.left || pyromaniac.body.left <= 0) {
-                pyromaniac.velocidadPatrulla = 80;
-                pyromaniac.body.setVelocityX(pyromaniac.velocidadPatrulla);
-            } else if (pyromaniac.body.blocked.right || pyromaniac.body.right >= 800) {
-                pyromaniac.velocidadPatrulla = -80;
-                pyromaniac.body.setVelocityX(pyromaniac.velocidadPatrulla);
-            }
-
-            // Si por alguna razón se cae de su plataforma, que camine normal en donde caiga
-            if (!pyromaniac.body.touching.down && !pyromaniac.body.blocked.down) {
-                // Mientras esté en el aire reduce un poco la velocidad para que caiga bien
-                pyromaniac.body.setVelocityX(pyromaniac.velocidadPatrulla * 0.5);
-            } else {
-                // En el suelo mantiene su velocidad de patrulla
-                pyromaniac.body.setVelocityX(pyromaniac.velocidadPatrulla);
-            }
-        };
+        this.enemigos.add(nuevoEnemigo);
     }
 
     destruirEnemigo(poder, enemigo) {
@@ -370,10 +244,7 @@ class EscenaPrincipal extends Phaser.Scene {
     }
 
     recibirDanioBala(jugador, bala) {
-        // Las flamas individuales hacen un poco menos de daño (8) porque vienen muchas juntas en ráfaga
-        // Detectamos si es una flama por su tamaño (miden 8x8, las balas comunes miden 10 o 12)
         let danio = (bala.width === 8) ? 8 : 25;
-
         this.vidaActual -= danio; 
         this.verificarMuerte();
         bala.destroy(); 
