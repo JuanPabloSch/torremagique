@@ -74,7 +74,7 @@ class EscenaPrincipal extends Phaser.Scene {
         this.plataformas.add(sueloBase);
         sueloBase.body.updateFromGameObject();
 
-        // GENERADOR DE TORRE (Ahora decide qué tipo de enemigo poner)
+        // GENERADOR DE TORRE (Ahora reparte entre los 3 tipos de enemigos)
         for (let altoY = 9650; altoY > 200; altoY -= 300) {
             let esPartida = Math.random() < 0.5;
 
@@ -88,9 +88,12 @@ class EscenaPrincipal extends Phaser.Scene {
 
                 if (Math.random() < 0.6) {
                     let xEnemigo = Math.random() < 0.5 ? Phaser.Math.Between(50, 230) : Phaser.Math.Between(570, 750);
-                    // 50% de chance de que sea torreta inteligente en plataformas partidas
-                    if (Math.random() < 0.5) {
-                        this.crearTorreta(xEnemigo, altoY);
+                    
+                    let azar = Math.random();
+                    if (azar < 0.35) {
+                        this.crearTorretaDirecta(xEnemigo, altoY);
+                    } else if (azar < 0.70) {
+                        this.crearKamikazeDirecto(xEnemigo, altoY); // <--- NUEVO: Kamikaze en partida
                     } else {
                         this.crearEnemigo(xEnemigo, altoY);
                     }
@@ -111,9 +114,11 @@ class EscenaPrincipal extends Phaser.Scene {
                 pisoNormal.body.updateFromGameObject();
 
                 if (Math.random() < 0.7) {
-                    // 40% de chance de que sea torreta inteligente en pisos largos
-                    if (Math.random() < 0.4) {
-                        this.crearTorreta(xAleatoria, altoY);
+                    let azar = Math.random();
+                    if (azar < 0.35) {
+                        this.crearTorretaDirecta(xAleatoria, altoY);
+                    } else if (azar < 0.70) {
+                        this.crearKamikazeDirecto(xAleatoria, altoY); // <--- NUEVO: Kamikaze en normal
                     } else {
                         this.crearEnemigo(xAleatoria, altoY);
                     }
@@ -175,8 +180,11 @@ class EscenaPrincipal extends Phaser.Scene {
 
         this.jugador.update();
 
+        // RECORREMOS TODOS LOS ENEMIGOS ACTIVOS
         this.enemigos.children.iterate((enemigo) => {
-            if (enemigo) enemigo.update();
+            if (enemigo && enemigo.update) {
+                enemigo.update();
+            }
         });
     }
 
@@ -185,17 +193,86 @@ class EscenaPrincipal extends Phaser.Scene {
         this.enemigos.add(enemigo);
     }
 
-    // NUEVO MÉTODO: Instancia la torreta y la mete al mismo grupo de enemigos 
-    // para que tus balas también la puedan destruir y sume al contador de bajas
-    crearTorreta(x, y) {
-        let torreta = new EnemigoTorreta(this, x, y);
+// MÉTODO TORRETA CORREGIDO (Ya no se caen del cielo)
+    crearTorretaDirecta(x, y) {
+        let torreta = this.add.rectangle(x, y - 30, 30, 30, 0xff00ff);
         this.enemigos.add(torreta);
+        this.physics.add.existing(torreta);
+        
+        // ¡ESTAS DOS LÍNEAS SALVAN A LA TORRETA DE LA CAÍDA!
+        torreta.body.setAllowGravity(false); // <--- Le apaga la gravedad para que no se caiga
+        torreta.body.setImmovable(true);     // <--- La deja fija contra empujones
+        
+        torreta.body.setCollideWorldBounds(true);
+
+        // Le metemos un temporizador para que dispare al jugador cada 2 segundos
+        let reloj = this.time.addEvent({
+            delay: 2000,
+            loop: true,
+            callback: () => {
+                if (!torreta.active || !this.jugador || !this.jugador.active) {
+                    reloj.destroy();
+                    return;
+                }
+                // Crea la bala roja
+                let bala = this.add.rectangle(torreta.x, torreta.y, 10, 10, 0xff0000);
+                this.balasEnemigas.add(bala);
+                
+                // Apunta directo a la posición del jugador en ese instante
+                this.physics.moveToObject(bala, this.jugador, 300);
+            }
+        });
+    }
+
+    // NUEVO MÉTODO DIRECTO: Crea el enemigo Kamikaze amarillo
+    crearKamikazeDirecto(x, y) {
+        let kamikaze = this.add.rectangle(x, y - 25, 22, 22, 0xffff00); // Amarillo peligro
+        this.enemigos.add(kamikaze);
+        this.physics.add.existing(kamikaze);
+        kamikaze.body.setCollideWorldBounds(true);
+        kamikaze.body.setAllowGravity(false); // Vuela, ignora la gravedad
+        
+        // Marcamos una propiedad personalizada para saber que ES un kamikaze
+        kamikaze.esKamikaze = true;
+        kamikaze.cargando = false;
+
+        // Le inyectamos su propia lógica de persecución en tiempo real
+        kamikaze.update = () => {
+            if (!kamikaze.active || !this.jugador || !this.jugador.active) return;
+
+            // Calculamos la distancia entre el kamikaze y el jugador
+            let distancia = Phaser.Math.Distance.Between(kamikaze.x, kamikaze.y, this.jugador.x, this.jugador.y);
+
+            // Si el jugador entra en su rango de detección (450 píxeles) o ya empezó a cargar
+            if (distancia < 450 || kamikaze.cargando) {
+                kamikaze.cargando = true;
+                
+                // Hace una carga rápida y directa hacia donde se mueva el jugador
+                this.physics.moveToObject(kamikaze, this.jugador, 280);
+                
+                // Efecto visual: parpadea rápido entre amarillo y rojo avisando que va a explotar
+                if (this.time.now % 200 < 100) {
+                    kamikaze.setFillStyle(0xff0000);
+                } else {
+                    kamikaze.setFillStyle(0xffff00);
+                }
+            } else {
+                // Si estás lejos, se queda flotando en su lugar patrullando lento
+                kamikaze.body.setVelocity(0, 0);
+            }
+        };
     }
 
     destruirEnemigo(poder, enemigo) {
         poder.destroy();   
-        enemigo.destroy(); 
+        
+        // Si destruís un kamikaze a tiros, hacemos un mini efecto de explosión visual antes de borrarlo
+        if (enemigo.esKamikaze) {
+            let exp = this.add.circle(enemigo.x, enemigo.y, 30, 0xffaa00);
+            this.time.delayedCall(100, () => exp.destroy());
+        }
 
+        enemigo.destroy(); 
         this.enemigosBajas += 1;
         this.textoBajas.setText('KILLS: ' + this.enemigosBajas);
     }
@@ -219,9 +296,23 @@ class EscenaPrincipal extends Phaser.Scene {
     }
 
     recibirDanio(jugador, enemigo) {
-        this.vidaActual -= 15; 
+        // Si nos chocamos con un Kamikaze, ¡el daño es mucho mayor (35) y explota!
+        if (enemigo.esKamikaze) {
+            this.vidaActual -= 35; // Alto daño por explosión
+            
+            // Efecto visual de explosión circular en la cara del jugador
+            let explosion = this.add.circle(enemigo.x, enemigo.y, 45, 0xff3300);
+            this.time.delayedCall(150, () => explosion.destroy());
+            
+            enemigo.destroy(); // Se inmola
+        } else {
+            // Daño normal por tocar un enemigo común o torreta (15)
+            this.vidaActual -= 15; 
+        }
+
         this.verificarMuerte();
 
+        // Retroceso por el impacto
         jugador.body.setVelocityY(-300);
         if (jugador.x < enemigo.x) {
             jugador.body.setVelocityX(-350);
