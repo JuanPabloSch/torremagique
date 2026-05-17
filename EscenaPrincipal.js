@@ -67,7 +67,8 @@ class EscenaPrincipal extends Phaser.Scene {
         this.plataformas = this.physics.add.staticGroup();
         this.poderes = this.physics.add.group({ allowGravity: false }); 
         this.balasEnemigas = this.physics.add.group({ allowGravity: false }); 
-        this.enemigos = this.physics.add.group(); 
+        this.enemigos = this.physics.add.group();
+        this.pinches = this.physics.add.staticGroup();
 
         // Suelo Base
         let sueloBase = this.add.rectangle(400, 9950, 800, 32, 0x00ff00);
@@ -105,6 +106,19 @@ class EscenaPrincipal extends Phaser.Scene {
                 this.plataformas.add(pisoNormal);
                 pisoNormal.body.updateFromGameObject();
 
+                // 40% de chances de que este piso tenga una HILERA de pinches abajo
+                if (Math.random() < 0.4) {
+                    // Elegimos un punto de inicio aleatorio adentro de la plataforma (ej: un poco a la izquierda)
+                    let inicioX = xAleatoria - 100; 
+
+                    // Creamos 5 pinches seguidos, uno al lado del otro (cada uno mide 20px de ancho)
+                    for (let i = 0; i < 5; i++) {
+                        let posX = inicioX + (i * 20); // Se van corriendo 20 píxeles a la derecha
+                        let pinche = new ObjetoPinche(this, posX, altoY + 26); 
+                        this.pinches.add(pinche);
+                    }
+                }
+
                 if (Math.random() < 0.7) {
                     this.invocarEnemigoAleatorio(xAleatoria, altoY);
                 } else if (Math.random() < 1.0) { 
@@ -118,9 +132,12 @@ class EscenaPrincipal extends Phaser.Scene {
             }
         }
 
+
+
         // COLISIONES
         this.physics.add.collider(this.jugador, this.plataformas);
         this.physics.add.collider(this.enemigos, this.plataformas); 
+        this.physics.add.overlap(this.jugador, this.pinches, this.tocarPinches, null, this); // ◄--- NUEVO
         
         this.physics.add.collider(this.poderes, this.plataformas, (bala) => { bala.destroy(); });
         this.physics.add.collider(this.balasEnemigas, this.plataformas, (bala) => { bala.destroy(); });
@@ -170,6 +187,19 @@ class EscenaPrincipal extends Phaser.Scene {
                 enemigo.update();
             }
         });
+    }
+
+    tocarPinches(jugador, pinche) {
+        // Te saca 20 de vida y te empuja hacia abajo con fuerza
+        this.vidaActual -= 20;
+        this.verificarMuerte();
+
+        // Retroceso violento hacia abajo por pincharte la cabeza
+        jugador.body.setVelocityY(250);
+        
+        // Destello blanco de daño
+        jugador.setFillStyle(0xffffff);
+        this.time.delayedCall(150, () => { jugador.setFillStyle(0x0000ff); });
     }
 
     // Sistema limpio para decidir qué clase instanciar
