@@ -75,11 +75,12 @@ class EscenaPrincipal extends Phaser.Scene {
         this.plataformas.add(sueloBase);
         sueloBase.body.updateFromGameObject();
 
-        // GENERADOR DE TORRE (Llamadas limpias usando las clases externas)
+// GENERADOR DE TORRE (Estructura limpia completa)
         for (let altoY = 9650; altoY > 200; altoY -= 300) {
             let esPartida = Math.random() < 0.5;
 
             if (esPartida) {
+                // Plataformas de los costados
                 let parteIzquierda = this.add.rectangle(150, altoY, 250, 32, 0x00ff00);
                 let parteDerecha = this.add.rectangle(650, altoY, 250, 32, 0x00ff00);
                 
@@ -100,20 +101,18 @@ class EscenaPrincipal extends Phaser.Scene {
                     });
                 }
             } else {
+                // Plataforma única central
                 let xAleatoria = Phaser.Math.Between(300, 500);
                 let pisoNormal = this.add.rectangle(xAleatoria, altoY, 450, 32, 0x00ff00);
                 
                 this.plataformas.add(pisoNormal);
                 pisoNormal.body.updateFromGameObject();
 
-                // 40% de chances de que este piso tenga una HILERA de pinches abajo
+                // 40% de chances de crear una hilera de pinches abajo del piso central
                 if (Math.random() < 0.4) {
-                    // Elegimos un punto de inicio aleatorio adentro de la plataforma (ej: un poco a la izquierda)
                     let inicioX = xAleatoria - 100; 
-
-                    // Creamos 5 pinches seguidos, uno al lado del otro (cada uno mide 20px de ancho)
                     for (let i = 0; i < 5; i++) {
-                        let posX = inicioX + (i * 20); // Se van corriendo 20 píxeles a la derecha
+                        let posX = inicioX + (i * 20);
                         let pinche = new ObjetoPinche(this, posX, altoY + 26); 
                         this.pinches.add(pinche);
                     }
@@ -130,15 +129,25 @@ class EscenaPrincipal extends Phaser.Scene {
                     });
                 }
             }
+
+            // INDEPENDIENTE: 35% de chances de una calavera flotando en el aire (para cualquier tipo de piso)
+            if (Math.random() < 0.35) {
+                let xAire = Phaser.Math.Between(100, 700);
+                let yAire = altoY + 150; // A mitad de camino en el vacío
+                
+                let calavera = new EnemigoCalavera(this, xAire, yAire);
+                this.enemigos.add(calavera); 
+            }
         }
-
-
 
         // COLISIONES
         this.physics.add.collider(this.jugador, this.plataformas);
         this.physics.add.collider(this.enemigos, this.plataformas); 
         this.physics.add.overlap(this.jugador, this.pinches, this.tocarPinches, null, this); // ◄--- NUEVO
-        
+        this.physics.add.overlap(this.jugador, this.enemigos, this.recibirDanio, null, this);
+        // Podés verificar que reaccione al tocarla. Como está en el grupo "enemigos", 
+        // ya le va a hacer el daño base de 15 por defecto al tocarla.
+
         this.physics.add.collider(this.poderes, this.plataformas, (bala) => { bala.destroy(); });
         this.physics.add.collider(this.balasEnemigas, this.plataformas, (bala) => { bala.destroy(); });
 
