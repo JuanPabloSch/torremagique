@@ -34,31 +34,31 @@ class EscenaPrincipal extends Phaser.Scene {
         this.capaLadrillos.setDepth(-1);       // Por encima de las estrellas    
 
         // JUGADOR
-        this.jugador = new Jugador(this, 400, 9800);
+        this.jugador = new Jugador(this, 400, 350);
 
         // INTERFAZ
         this.interfazVida = this.add.graphics();
         this.interfazVida.setDepth(10); 
 
-        this.textoAltura = this.add.text(20, 20, 'ALTURA: 0m', {
-            fontFamily: 'Arial',
-            fontSize: '24px',
-            fontWeight: 'bold',
-            fill: '#ffffff'
-        });
-        this.textoAltura.setScrollFactor(0);
-        this.textoAltura.setDepth(11);
+        // this.textoAltura = this.add.text(20, 20, 'ALTURA: 0m', {
+        //     fontFamily: 'Arial',
+        //     fontSize: '24px',
+        //     fontWeight: 'bold',
+        //     fill: '#ffffff'
+        // });
+        // this.textoAltura.setScrollFactor(0);
+        // this.textoAltura.setDepth(11);
 
-        this.recordGuardado = localStorage.getItem('torre_max_record') ? parseInt(localStorage.getItem('torre_max_record')) : 0;
+        // this.recordGuardado = localStorage.getItem('torre_max_record') ? parseInt(localStorage.getItem('torre_max_record')) : 0;
 
-        this.textoRecord = this.add.text(20, 50, 'RÉCORD: ' + this.recordGuardado + 'm', {
-            fontFamily: 'Arial',
-            fontSize: '18px',
-            fontWeight: 'bold',
-            fill: '#ffcc00'
-        });
-        this.textoRecord.setScrollFactor(0);
-        this.textoRecord.setDepth(11);
+        // this.textoRecord = this.add.text(20, 50, 'RÉCORD: ' + this.recordGuardado + 'm', {
+        //     fontFamily: 'Arial',
+        //     fontSize: '18px',
+        //     fontWeight: 'bold',
+        //     fill: '#ffcc00'
+        // });
+        // this.textoRecord.setScrollFactor(0);
+        // this.textoRecord.setDepth(11);
 
         this.textoBajas = this.add.text(580, 20, 'KILLS: 0', {
             fontFamily: 'Arial',
@@ -176,31 +176,25 @@ class EscenaPrincipal extends Phaser.Scene {
     }
 
     update() {
+        // 1. ACTUALIZAR INTERFAZ (Solo la vida y las bajas)
         this.actualizarBarraVida();
 
-        if (this.jugador.y < this.alturaMaximaAlcanzada) {
-            this.alturaMaximaAlcanzada = this.jugador.y; 
-        }
-        let metrosEscalados = Math.floor((9800 - this.alturaMaximaAlcanzada) / 10);
-        this.textoAltura.setText('ALTURA: ' + metrosEscalados + 'm');
-
-        if (metrosEscalados > this.recordGuardado) {
-            this.recordGuardado = metrosEscalados;
-            this.textoRecord.setText('RÉCORD: ' + this.recordGuardado + 'm');
-            localStorage.setItem('torre_max_record', this.recordGuardado);
-        }
-
-        // Movimiento del fondo (SOLO ESTRELLAS para evitar mareos)
+        // 2. MOVIMIENTO DEL FONDO (Solo estrellas para evitar mareos)
         if (this.jugador.body.velocity.y !== 0) {
-            // Las estrellas se mueven al mínimo, dando profundidad en el vacío
             this.capaEstrellas.tilePositionY += this.jugador.body.velocity.y * 0.001;
-            
-            // Los ladrillos quedan 100% fijos, sirviendo como ancla visual
-            // (Borramos o comentamos la línea de tilePositionY de los ladrillos)
         }
 
+        // 3. ACTUALIZAR JUGADOR
         this.jugador.update();
 
+        // 4. DETECTOR DE CIMA (Disparador de la Boss Fight)
+        // Cuando el jugador pasa el límite superior (Y <= 250), viaja al jefe
+        if (this.jugador.y <= 250) {
+            this.jugador.body.setVelocity(0, 0); // Frenamos al personaje
+            this.scene.start('EscenaBoss', { vidaHeredada: this.vidaActual });
+        }
+
+        // 5. ACTUALIZAR ENEMIGOS
         this.enemigos.children.iterate((enemigo) => {
             if (enemigo && enemigo.update) {
                 enemigo.update();

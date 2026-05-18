@@ -11,7 +11,7 @@ class EnemigoTorreta extends Phaser.GameObjects.Rectangle {
         
         // Temporizador de disparo (cada 2 segundos)
         this.temporizadorDisparo = scene.time.addEvent({
-            delay: 2000,
+            delay: 1200,
             callback: this.dispararAlJugador,
             callbackScope: this,
             loop: true

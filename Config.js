@@ -10,5 +10,5 @@ const config = {
             debug: true 
         }
     },
-    scene: [EscenaPrincipal] 
+    scene: [EscenaPrincipal, EscenaBoss] 
 };
