@@ -10,7 +10,7 @@ const config = {
             debug: true // Cambialo a false si no querés ver los recuadros verdes de las cajas de colisión
         }
     },
-    scene: [EscenaPrincipal, EscenaBoss] // Le avisamos que use la clase que está en EscenaPrincipal.js
+    scene: [EscenaPrincipal, EscenaBoss, EscenaSidescroller] // Le avisamos que use la clase que está en EscenaPrincipal.js
 };
 
 // Arrancamos el juego pasando la configuración que creamos arriba

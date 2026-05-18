@@ -138,11 +138,18 @@ class EscenaBoss extends Phaser.Scene {
             
             this.add.text(250, 300, '¡JEFE DERROTADO!', { fontSize: '32px', fill: '#00ff00', fontWeight: 'bold' });
             
-            // Esperamos 3 segundos y pasamos a la escena horizontal (la crearemos después)
+            if (this.vidaActualBoss <= 0) {
+            this.boss.destroy();
+            this.physics.world.shutdown(); 
+            
+            this.add.text(250, 300, '¡JEFE DERROTADO!', { fontSize: '32px', fill: '#00ff00', fontWeight: 'bold' });
+            
+            // Esperamos 3 segundos y saltamos de verdad al Sidescroller
             this.time.delayedCall(3000, () => {
-                alert("¡Acá va a arrancar el nivel Sidescroller Horizontal!");
-                // this.scene.start('EscenaSidescroller', { vidaHeredada: this.vidaActual });
+                // PASAJE DE ESCENA REAL:
+                this.scene.start('EscenaSidescroller', { vidaHeredada: this.vidaActual });
             });
+        }
         }
     }
 
