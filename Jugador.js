@@ -35,9 +35,16 @@ class Jugador extends Phaser.GameObjects.Rectangle {
             this.body.setVelocityX(0);
         }
 
-        // Salto
+        // Salto (Corregido con "this.teclas")
         if (this.teclas.up.isDown && this.body.touching.down) {
-            this.body.setVelocityY(-650);
+            this.body.setVelocityY(-650); // Fuerza del salto máximo
+        }
+
+        // Corte Sensitivo (Corregido con "this.teclas")
+        // Si suelta la tecla de arriba MIENTRAS está subiendo, recortamos la velocidad
+        if (Phaser.Input.Keyboard.JustUp(this.teclas.up) && this.body.velocity.y < 0) {
+            // Multiplicamos por 0.4 para frenarlo a menos de la mitad inmediatamente
+            this.body.setVelocityY(this.body.velocity.y * 0.4); 
         }
 
         // Control de daño por caída libre
@@ -49,11 +56,11 @@ class Jugador extends Phaser.GameObjects.Rectangle {
         if (this.body.touching.down && this.jugadorCayendo) {
             let distanciaCaida = this.y - this.alturaInicioCaida;
             if (distanciaCaida > 850) {
-                this.escena.scene.restart(); // Reinicia la escena desde el contexto guardado
+                this.escena.scene.restart(); // Reinicia la escena
             }
             this.jugadorCayendo = false;
         }
-    }
+    } // <-- Acordate de cerrar siempre la llave del método
 
     // Métodos de interacción (Daño y cura)
     recibirDanio(puntos, origenX) {
