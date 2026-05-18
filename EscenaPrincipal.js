@@ -3,7 +3,11 @@ class EscenaPrincipal extends Phaser.Scene {
         super({ key: 'EscenaPrincipal' });
     }
 
-    preload() {}
+    preload() {
+        // Cargamos las imágenes especificando la carpeta 'background/'
+        this.load.image('estrellas', 'background/fondo_estrellas.png');
+        this.load.image('ladrillos', 'background/pared_ladrillos.png');
+    }
 
     create() {
         // 1. LÍMITES DEL MUNDO
@@ -18,14 +22,16 @@ class EscenaPrincipal extends Phaser.Scene {
         this.alturaMaximaAlcanzada = 9800; 
         this.enemigosBajas = 0; 
 
-        // FONDO
-        this.lineasFondo = this.add.graphics();
-        this.lineasFondo.lineStyle(4, 0x333333, 1);
-        for (let i = 0; i < 600; i += 150) {
-            this.lineasFondo.lineBetween(0, i, 800, i);
-        }
-        this.lineasFondo.setScrollFactor(0); 
-        this.lineasFondo.setDepth(-1);       
+        // FONDO PARALLAX (2 Capas con TileSprites)
+        // Capa 1: Estrellas (bien atrás). Cubre toda la pantalla (800x600)
+        this.capaEstrellas = this.add.tileSprite(400, 300, 800, 600, 'estrellas');
+        this.capaEstrellas.setScrollFactor(0); // Fijo a la cámara
+        this.capaEstrellas.setDepth(-2);       // Al fondo de todo
+
+        // Capa 2: Ladrillos con huecos (adelante de las estrellas, atrás del jugador)
+        this.capaLadrillos = this.add.tileSprite(400, 300, 800, 600, 'ladrillos');
+        this.capaLadrillos.setScrollFactor(0); // Fijo a la cámara
+        this.capaLadrillos.setDepth(-1);       // Por encima de las estrellas    
 
         // JUGADOR
         this.jugador = new Jugador(this, 400, 9800);
@@ -184,10 +190,14 @@ class EscenaPrincipal extends Phaser.Scene {
             localStorage.setItem('torre_max_record', this.recordGuardado);
         }
 
+        // Movimiento del fondo (SOLO ESTRELLAS para evitar mareos)
         if (this.jugador.body.velocity.y !== 0) {
-            this.lineasFondo.y -= this.jugador.body.velocity.y * 0.002;
+            // Las estrellas se mueven al mínimo, dando profundidad en el vacío
+            this.capaEstrellas.tilePositionY += this.jugador.body.velocity.y * 0.001;
+            
+            // Los ladrillos quedan 100% fijos, sirviendo como ancla visual
+            // (Borramos o comentamos la línea de tilePositionY de los ladrillos)
         }
-        this.lineasFondo.y = this.lineasFondo.y % 150;
 
         this.jugador.update();
 
