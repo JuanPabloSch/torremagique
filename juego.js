@@ -7,10 +7,10 @@ const config = {
         default: 'arcade',
         arcade: {
             gravity: { y: 600 },
-            debug: true // Cambialo a false si no querés ver los recuadros verdes de las cajas de colisión
+            debug: false // ◄--- ¡CAMBIADO A FALSE! Chau cuadraditos verdes
         }
     },
-    scene: [EscenaPrincipal, EscenaBoss, EscenaSidescroller] // Le avisamos que use la clase que está en EscenaPrincipal.js
+    scene: [EscenaSidescroller, EscenaPrincipal, EscenaBoss, ] 
 };
 
 // Arrancamos el juego pasando la configuración que creamos arriba

@@ -1,75 +1,117 @@
-class Jugador extends Phaser.GameObjects.Rectangle {
+class Jugador extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y) {
-        // Llamamos al constructor de Phaser.Rectangle (escena, x, y, ancho, alto, color)
-        super(scene, x, y, 32, 32, 0x0000ff);
+        super(scene, x, y, 'benedict_walk');
 
-        // Agregamos el jugador visualmente a la escena
         scene.add.existing(this);
-        // Le activamos las físicas Arcade
-        scene.physics.add.existing(this, false);
+        scene.physics.add.existing(this);
 
-        // Guardamos la referencia de la escena para usarla adentro de la clase
         this.escena = scene;
 
-        // Configuraciones de físicas básicas
         this.body.setCollideWorldBounds(true);
+        this.body.setGravityY(600); 
 
-        // Atributos de las mecánicas (Tu lógica de vida y caídas)
+        // Mantenemos la caja de colisión del cuerpo base
+        this.body.setSize(35, 75);
+        this.body.setOffset(12, 5);
+
         this.vidaMaxima = 100;
         this.vidaActual = 100;
         this.jugadorCayendo = false;
         this.alturaInicioCaida = 0;
 
-        // Registramos los controles acá adentro
+        // NUEVA VARIABLE: Para saber si está en medio de la animación del látigo
+        this.estaAtacando = false;
+
         this.teclas = this.escena.input.keyboard.createCursorKeys();
+        // Agregamos la barra espaciadora para el ataque
+        this.teclaEspacio = this.escena.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     }
 
-    // Toda la lógica que antes corría en el update() de la escena sobre el jugador
     update() {
-        // Movimiento Horizontal
+        // FRENO DE ATAQUE: Si está tirando el latigazo, no se puede mover ni saltar
+        if (this.estaAtacando) {
+            return; 
+        }
+
+        // MOVIMIENTO HORIZONTAL
         if (this.teclas.left.isDown) {
             this.body.setVelocityX(-200);
+            this.setFlipX(true); 
+            if (this.body.blocked.down || this.body.touching.down) {
+                this.anims.play('caminar_benedict', true);
+            }
         } else if (this.teclas.right.isDown) {
             this.body.setVelocityX(200);
+            this.setFlipX(false); 
+            if (this.body.blocked.down || this.body.touching.down) {
+                this.anims.play('caminar_benedict', true);
+            }
         } else {
             this.body.setVelocityX(0);
+            if (this.body.blocked.down || this.body.touching.down) {
+                this.anims.play('quieto_benedict', true);
+            }
         }
 
-        // Salto (Corregido con "this.teclas")
-        if (this.teclas.up.isDown && this.body.touching.down) {
-            this.body.setVelocityY(-650); // Fuerza del salto máximo
+        if (!this.body.blocked.down && !this.body.touching.down) {
+            this.anims.stop(); 
         }
 
-        // Corte Sensitivo (Corregido con "this.teclas")
-        // Si suelta la tecla de arriba MIENTRAS está subiendo, recortamos la velocidad
+        // SALTO
+        if (this.teclas.up.isDown && (this.body.touching.down || this.body.blocked.down)) {
+            this.body.setVelocityY(-650); 
+        }
+
+        // CORTE SENSITIVO
         if (Phaser.Input.Keyboard.JustUp(this.teclas.up) && this.body.velocity.y < 0) {
-            // Multiplicamos por 0.4 para frenarlo a menos de la mitad inmediatamente
             this.body.setVelocityY(this.body.velocity.y * 0.4); 
         }
 
-        // Control de daño por caída libre
+        // NUEVA MECÁNICA: DISPARAR LATIGAZO CON ESPACIO (CORREGIDO EL DESFASAJE)
+        if (Phaser.Input.Keyboard.JustDown(this.teclaEspacio) && (this.body.blocked.down || this.body.touching.down)) {
+            this.body.setVelocityX(0); // Lo clavamos al piso
+            this.estaAtacando = true;
+
+            // --- TRUCO DE COMPENSACIÓN DE EJE ---
+            // Desplazamos el origen horizontal para que el cuerpo se quede quieto y el látigo sume espacio hacia adelante.
+            // Si mira a la derecha (flipX = false), el origen se mueve a la izquierda (0.25). 
+            // Si mira a la izquierda (flipX = true), se mueve a la derecha (0.75).
+            if (this.flipX) {
+                this.setOrigin(0.75, 0.5);
+            } else {
+                this.setOrigin(0.25, 0.5);
+            }
+
+            this.anims.play('latigazo_benedict');
+
+            // Cuando la animación del latigazo termine, reseteamos el eje y desbloqueamos
+            this.once('animationcomplete', (anim) => {
+                if (anim.key === 'latigazo_benedict') {
+                    this.setOrigin(0.5, 0.5); // Volvemos al centro perfecto para caminar
+                    this.estaAtacando = false;
+                }
+            });
+        }
+
+        // DAÑO POR CAÍDA LIBRE
         if (this.body.velocity.y > 0 && !this.jugadorCayendo) {
             this.jugadorCayendo = true;
             this.alturaInicioCaida = this.y;
         }
         
-        if (this.body.touching.down && this.jugadorCayendo) {
+        if ((this.body.touching.down || this.body.blocked.down) && this.jugadorCayendo) {
             let distanciaCaida = this.y - this.alturaInicioCaida;
             if (distanciaCaida > 850) {
-                this.escena.scene.restart(); // Reinicia la escena
+                this.escena.scene.restart(); 
             }
             this.jugadorCayendo = false;
         }
-    } // <-- Acordate de cerrar siempre la llave del método
+    }
 
-    // Métodos de interacción (Daño y cura)
     recibirDanio(puntos, origenX) {
         this.vidaActual -= puntos;
-        
-        // Ejecutamos la verificación de muerte de la escena
         this.escena.verificarMuerte(this.vidaActual);
 
-        // Knockback (Empuje)
         this.body.setVelocityY(-250);
         if (this.x < origenX) {
             this.body.setVelocityX(-300);
@@ -77,9 +119,8 @@ class Jugador extends Phaser.GameObjects.Rectangle {
             this.body.setVelocityX(300);
         }
 
-        // Efecto visual de parpadeo por daño
-        this.setFillStyle(0xffffff);
-        this.escena.time.delayedCall(150, () => { this.setFillStyle(0x0000ff); });
+        this.setTint(0xff0000); 
+        this.escena.time.delayedCall(150, () => { this.clearTint(); }); 
     }
 
     recogerCuracion(puntos) {
@@ -87,9 +128,7 @@ class Jugador extends Phaser.GameObjects.Rectangle {
         if (this.vidaActual > this.vidaMaxima) {
             this.vidaActual = this.vidaMaxima;
         }
-
-        // Efecto visual de parpadeo verde por curación
-        this.setFillStyle(0x00ff00);
-        this.escena.time.delayedCall(100, () => { this.setFillStyle(0x0000ff); });
+        this.setTint(0x00ff00); 
+        this.escena.time.delayedCall(100, () => { this.clearTint(); }); 
     }
 }
