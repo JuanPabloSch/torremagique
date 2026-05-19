@@ -12,15 +12,16 @@ class EscenaSidescroller extends Phaser.Scene {
         this.load.image('fondo_l2', 'background/fondo_l2.png');   
         this.load.image('fondo_l21', 'background/fondo_l21.png'); 
         
-        // CORREGIDO: Ahora Phaser recorta el nuevo Benedict con sus medidas reales de 90x100
+        // Caminata de Benedict (90x100)
         this.load.spritesheet('benedict_walk', 'assets/benedict_walk.png', { 
             frameWidth: 90, 
             frameHeight: 100 
         });
         
+        // CORREGIDO: Ajustado a tus nuevas medidas de 112 de ancho (448/4 aprox) y 108 de alto
         this.load.spritesheet('benedict_attack', 'assets/benedict_attack.png', { 
-            frameWidth: 164, 
-            frameHeight: 80 
+            frameWidth: 112, 
+            frameHeight: 108 
         });
     }
 
@@ -35,7 +36,7 @@ class EscenaSidescroller extends Phaser.Scene {
         this.capaNubes = this.add.tileSprite(0, 0, 800, 600, 'fondo_l21');
         this.capaNubes.setOrigin(0, 0).setScrollFactor(0).setDepth(-2);
 
-        // 3. FABRICACIÓN DE ANIMACIONES (Sincronizadas con tus 5 frames actuales)
+        // 3. FABRICACIÓN DE ANIMACIONES
         this.anims.create({
             key: 'caminar_benedict',
             frames: this.anims.generateFrameNumbers('benedict_walk', { start: 0, end: 4 }),
@@ -49,10 +50,11 @@ class EscenaSidescroller extends Phaser.Scene {
             frameRate: 1
         });
 
+        // Configurada para tus 4 frames nuevos de ataque
         this.anims.create({
             key: 'latigazo_benedict',
             frames: this.anims.generateFrameNumbers('benedict_attack', { start: 0, end: 3 }),
-            frameRate: 15, 
+            frameRate: 12, // Un toque más lento para que se note la secuencia del látigo
             repeat: 0      
         });
 
@@ -64,7 +66,6 @@ class EscenaSidescroller extends Phaser.Scene {
         this.crearPisoSólido(4450, 8000); 
         this.crearPisoSólido(8500, 12800);
 
-        // ARQUITECTURA MODIFICADA
         this.crearMuroLadrillos(800, 495, 60, 110); 
         this.crearPlataformaFlotante(1650, 460, 120, 20); 
         this.crearPlataformaFlotante(2300, 480, 150, 20); 
@@ -79,7 +80,7 @@ class EscenaSidescroller extends Phaser.Scene {
         this.crearMuroLadrillos(6300, 470, 120, 160); 
         this.crearMuroLadrillos(6600, 510, 40, 90);
 
-        // 5. JUGADOR (Ajustado el Y para que aparezca bien plantado debido al nuevo tamaño)
+        // 5. JUGADOR
         this.jugador = new Jugador(this, 100, 480);
 
         // 6. CÁMARA
@@ -145,7 +146,10 @@ class Jugador extends Phaser.Physics.Arcade.Sprite {
         this.body.setCollideWorldBounds(true);
         this.body.setGravityY(600); 
 
-        // CORREGIDO: Caja física calibrada para el tamaño de 90x100
+        // Seteamos el origen fijo en el centro clásico para evitar saltos raros
+        this.setOrigin(0.5, 0.5);
+
+        // Caja de colisión para el estado normal (caminar/quieto)
         this.body.setSize(40, 95);  
         this.body.setOffset(25, 5);
 
@@ -193,28 +197,45 @@ class Jugador extends Phaser.Physics.Arcade.Sprite {
             this.body.setVelocityY(-650); 
         }
 
-        // CORTE SENSITIVO
+        // CORTE SENSITIVO DE SALTO
         if (Phaser.Input.Keyboard.JustUp(this.teclas.up) && this.body.velocity.y < 0) {
             this.body.setVelocityY(this.body.velocity.y * 0.4); 
         }
 
-        // LATIGAZO CON ESPACIO
+// DISPARAR LATIGAZO
         if (Phaser.Input.Keyboard.JustDown(this.teclaEspacio) && (this.body.blocked.down || this.body.touching.down)) {
             this.body.setVelocityX(0); 
             this.estaAtacando = true;
 
-            if (this.flipX) {
-                this.setOrigin(0.75, 0.5);
-            } else {
-                this.setOrigin(0.25, 0.5);
-            }
+            // Cambiamos a la textura de ataque (112x108 con personaje centrado)
+            this.setTexture('benedict_attack');
+
+            // --- CONFIGURACIÓN ESTÁNDAR (PERSONAJE CENTRADO) ---
+            // Como ahora el cuerpo está en el centro, el offset es el mismo para ambos lados.
+            // Ajustá el primer número (36) si querés mover la caja un poquito más a la izquierda o derecha.
+            this.body.setSize(40, 95);
+            this.body.setOffset(36, 13); 
 
             this.anims.play('latigazo_benedict');
 
+            // Frame 3 real (index 2) para el golpe
+            this.on('animationupdate', (anim, frame) => {
+                if (anim.key === 'latigazo_benedict' && frame.index === 2) {
+                    console.log("¡GOLPE! Látigo estirado en el centro.");
+                }
+            });
+
+            // Al terminar, volvemos al estado de caminata sin sacudidas
             this.once('animationcomplete', (anim) => {
                 if (anim.key === 'latigazo_benedict') {
-                    this.setOrigin(0.5, 0.5); 
+                    this.setTexture('benedict_walk');
+                    
+                    // Volvemos a la caja normal de caminata
+                    this.body.setSize(40, 95);  
+                    this.body.setOffset(25, 5);
+                    
                     this.estaAtacando = false;
+                    this.off('animationupdate'); 
                 }
             });
         }
@@ -237,23 +258,16 @@ class Jugador extends Phaser.Physics.Arcade.Sprite {
     recibirDanio(puntos, origenX) {
         this.vidaActual -= puntos;
         this.escena.verificarMuerte(this.vidaActual);
-
         this.body.setVelocityY(-250);
-        if (this.x < origenX) {
-            this.body.setVelocityX(-300);
-        } else {
-            this.body.setVelocityX(300);
-        }
-
+        if (this.x < origenX) this.body.setVelocityX(-300);
+        else this.body.setVelocityX(300);
         this.setTint(0xff0000); 
         this.escena.time.delayedCall(150, () => { this.clearTint(); }); 
     }
 
     recogerCuracion(puntos) {
         this.vidaActual += puntos;
-        if (this.vidaActual > this.vidaMaxima) {
-            this.vidaActual = this.vidaMaxima;
-        }
+        if (this.vidaActual > this.vidaMaxima) this.vidaActual = this.vidaMaxima;
         this.setTint(0x00ff00); 
         this.escena.time.delayedCall(100, () => { this.clearTint(); }); 
     }
