@@ -1,3 +1,138 @@
+class EscenaSidescroller extends Phaser.Scene {
+    constructor() {
+        super({ key: 'EscenaSidescroller' });
+    }
+
+    init(data) {
+        this.vidaActual = data.vidaHeredada || 100;
+        this.vidaMaxima = 100;
+    }
+
+    preload() {
+        this.load.image('fondo_l2', 'background/fondo_l2.png');   
+        this.load.image('fondo_l21', 'background/fondo_l21.png'); 
+        
+        // CORREGIDO: Ahora Phaser recorta el nuevo Benedict con sus medidas reales de 90x100
+        this.load.spritesheet('benedict_walk', 'assets/benedict_walk.png', { 
+            frameWidth: 90, 
+            frameHeight: 100 
+        });
+        
+        this.load.spritesheet('benedict_attack', 'assets/benedict_attack.png', { 
+            frameWidth: 164, 
+            frameHeight: 80 
+        });
+    }
+
+    create() {
+        // 1. DIMENSIONES DEL MUNDO
+        this.physics.world.setBounds(0, 0, 12800, 600);
+
+        // 2. PARALLAX
+        this.fondoHorizontal = this.add.tileSprite(0, 0, 800, 600, 'fondo_l2');
+        this.fondoHorizontal.setOrigin(0, 0).setScrollFactor(0).setDepth(-3);
+
+        this.capaNubes = this.add.tileSprite(0, 0, 800, 600, 'fondo_l21');
+        this.capaNubes.setOrigin(0, 0).setScrollFactor(0).setDepth(-2);
+
+        // 3. FABRICACIÓN DE ANIMACIONES (Sincronizadas con tus 5 frames actuales)
+        this.anims.create({
+            key: 'caminar_benedict',
+            frames: this.anims.generateFrameNumbers('benedict_walk', { start: 0, end: 4 }),
+            frameRate: 10, 
+            repeat: -1
+        });
+
+        this.anims.create({
+            key: 'quieto_benedict',
+            frames: [{ key: 'benedict_walk', frame: 0 }], 
+            frameRate: 1
+        });
+
+        this.anims.create({
+            key: 'latigazo_benedict',
+            frames: this.anims.generateFrameNumbers('benedict_attack', { start: 0, end: 3 }),
+            frameRate: 15, 
+            repeat: 0      
+        });
+
+        // 4. GRUPO DE PLATAFORMAS
+        this.plataformas = this.physics.add.staticGroup();
+
+        this.crearPisoSólido(0, 1500); 
+        this.crearPisoSólido(1800, 4150); 
+        this.crearPisoSólido(4450, 8000); 
+        this.crearPisoSólido(8500, 12800);
+
+        // ARQUITECTURA MODIFICADA
+        this.crearMuroLadrillos(800, 495, 60, 110); 
+        this.crearPlataformaFlotante(1650, 460, 120, 20); 
+        this.crearPlataformaFlotante(2300, 480, 150, 20); 
+        this.crearMuroLadrillos(2500, 450, 50, 200);      
+        this.crearPlataformaFlotante(2500, 350, 200, 20); 
+
+        this.crearPlataformaFlotante(4220, 470, 90, 20); 
+        this.crearPlataformaFlotante(4300, 440, 90, 20); 
+        this.crearPlataformaFlotante(4380, 470, 90, 20); 
+
+        this.crearMuroLadrillos(6000, 510, 40, 90);
+        this.crearMuroLadrillos(6300, 470, 120, 160); 
+        this.crearMuroLadrillos(6600, 510, 40, 90);
+
+        // 5. JUGADOR (Ajustado el Y para que aparezca bien plantado debido al nuevo tamaño)
+        this.jugador = new Jugador(this, 100, 480);
+
+        // 6. CÁMARA
+        this.cameras.main.setBounds(0, 0, 12800, 600);
+        this.cameras.main.startFollow(this.jugador, true, 0.1, 0.1);
+
+        // 7. COLISIONES
+        this.physics.add.collider(this.jugador, this.plataformas);
+        
+        this.add.text(50, 50, 'NIVEL 2: SIDESCROLLER', { fontSize: '20px', fill: '#00ffff', fontWeight: 'bold' }).setScrollFactor(0);
+        this.add.text(12500, 450, '🏁 META', { fontSize: '24px', fill: '#ffff00', fontWeight: 'bold' });
+    }
+
+    update() {
+        if (this.jugador && this.jugador.active) {
+            this.jugador.update(); 
+        }
+
+        this.fondoHorizontal.tilePositionX = this.cameras.main.scrollX * 0.2;
+        this.capaNubes.tilePositionX = this.cameras.main.scrollX * 0.55;
+
+        if (this.jugador.y > 620) {
+            this.scene.start('EscenaSidescroller', { vidaHeredada: this.vidaActual });
+        }
+
+        if (this.jugador.x >= 12600) {
+            this.jugador.body.setVelocity(0, 0);
+            this.add.text(this.cameras.main.scrollX + 200, 250, '¡NIVEL COMPLETADO!', { fontSize: '40px', fill: '#00ff00', fontWeight: 'bold' });
+            this.physics.world.shutdown();
+        }
+    }
+
+    crearPisoSólido(inicioX, finX) {
+        let ancho = finX - inicioX;
+        let centroX = inicioX + (ancho / 2);
+        let bloquePiso = this.add.rectangle(centroX, 580, ancho, 32, 0x00ff00);
+        this.plataformas.add(bloquePiso);
+        bloquePiso.body.updateFromGameObject();
+    }
+
+    crearPlataformaFlotante(x, y, ancho, alto) {
+        let plat = this.add.rectangle(x, y, ancho, alto, 0x00ff00);
+        this.plataformas.add(plat);
+        plat.body.updateFromGameObject();
+    }
+
+    crearMuroLadrillos(x, y, ancho, alto) {
+        let muro = this.add.rectangle(x, y, ancho, alto, 0xaaaaaa);
+        this.plataformas.add(muro);
+        muro.body.updateFromGameObject();
+    }
+}
+
 class Jugador extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y) {
         super(scene, x, y, 'benedict_walk');
@@ -10,25 +145,21 @@ class Jugador extends Phaser.Physics.Arcade.Sprite {
         this.body.setCollideWorldBounds(true);
         this.body.setGravityY(600); 
 
-        // Mantenemos la caja de colisión del cuerpo base
-        this.body.setSize(35, 75);
-        this.body.setOffset(12, 5);
+        // CORREGIDO: Caja física calibrada para el tamaño de 90x100
+        this.body.setSize(40, 95);  
+        this.body.setOffset(25, 5);
 
         this.vidaMaxima = 100;
         this.vidaActual = 100;
         this.jugadorCayendo = false;
         this.alturaInicioCaida = 0;
-
-        // NUEVA VARIABLE: Para saber si está en medio de la animación del látigo
         this.estaAtacando = false;
 
         this.teclas = this.escena.input.keyboard.createCursorKeys();
-        // Agregamos la barra espaciadora para el ataque
         this.teclaEspacio = this.escena.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     }
 
     update() {
-        // FRENO DE ATAQUE: Si está tirando el latigazo, no se puede mover ni saltar
         if (this.estaAtacando) {
             return; 
         }
@@ -67,15 +198,11 @@ class Jugador extends Phaser.Physics.Arcade.Sprite {
             this.body.setVelocityY(this.body.velocity.y * 0.4); 
         }
 
-        // NUEVA MECÁNICA: DISPARAR LATIGAZO CON ESPACIO (CORREGIDO EL DESFASAJE)
+        // LATIGAZO CON ESPACIO
         if (Phaser.Input.Keyboard.JustDown(this.teclaEspacio) && (this.body.blocked.down || this.body.touching.down)) {
-            this.body.setVelocityX(0); // Lo clavamos al piso
+            this.body.setVelocityX(0); 
             this.estaAtacando = true;
 
-            // --- TRUCO DE COMPENSACIÓN DE EJE ---
-            // Desplazamos el origen horizontal para que el cuerpo se quede quieto y el látigo sume espacio hacia adelante.
-            // Si mira a la derecha (flipX = false), el origen se mueve a la izquierda (0.25). 
-            // Si mira a la izquierda (flipX = true), se mueve a la derecha (0.75).
             if (this.flipX) {
                 this.setOrigin(0.75, 0.5);
             } else {
@@ -84,10 +211,9 @@ class Jugador extends Phaser.Physics.Arcade.Sprite {
 
             this.anims.play('latigazo_benedict');
 
-            // Cuando la animación del latigazo termine, reseteamos el eje y desbloqueamos
             this.once('animationcomplete', (anim) => {
                 if (anim.key === 'latigazo_benedict') {
-                    this.setOrigin(0.5, 0.5); // Volvemos al centro perfecto para caminar
+                    this.setOrigin(0.5, 0.5); 
                     this.estaAtacando = false;
                 }
             });

@@ -34,16 +34,18 @@ class EscenaSidescroller extends Phaser.Scene {
         this.capaNubes.setOrigin(0, 0).setScrollFactor(0).setDepth(-2);
 
         // 3. FABRICACIÓN DE ANIMACIONES (Para que las use el nuevo Jugador.js)
+        // --- ACTUALIZACIÓN DE ANIMACIONES PARA EL NUEVO SPRITE ---
         this.anims.create({
             key: 'caminar_benedict',
-            frames: this.anims.generateFrameNumbers('benedict_walk', { start: 0, end: 7 }),
-            frameRate: 12,
+            // Ahora va del frame 0 al 4 (los 5 cuadros del archivo)
+            frames: this.anims.generateFrameNumbers('benedict_walk', { start: 0, end: 4 }),
+            frameRate: 10, // Bajamos a 10 para que no se vea tan acelerado con menos frames
             repeat: -1
         });
 
         this.anims.create({
             key: 'quieto_benedict',
-            frames: [{ key: 'benedict_walk', frame: 0 }],
+            frames: [{ key: 'benedict_walk', frame: 0 }], // Se queda parado en el primer cuadro
             frameRate: 1
         });
 
