@@ -12,15 +12,15 @@ class EscenaSidescroller extends Phaser.Scene {
         this.load.image('fondo_l2', 'background/fondo_l2.png');   
         this.load.image('fondo_l21', 'background/fondo_l21.png'); 
         
-        // Caminata de Benedict (90x100)
+        // Caminata de Benedict (90x100) -> Impecable
         this.load.spritesheet('benedict_walk', 'assets/benedict_walk.png', { 
             frameWidth: 90, 
             frameHeight: 100 
         });
         
-        // CORREGIDO: Ajustado a tus nuevas medidas de 112 de ancho (448/4 aprox) y 108 de alto
+        // CORREGIDO: 920 de ancho / 4 frames = 230 de ancho real por cuadro
         this.load.spritesheet('benedict_attack', 'assets/benedict_attack.png', { 
-            frameWidth: 112, 
+            frameWidth: 230, 
             frameHeight: 108 
         });
     }
@@ -202,35 +202,52 @@ class Jugador extends Phaser.Physics.Arcade.Sprite {
             this.body.setVelocityY(this.body.velocity.y * 0.4); 
         }
 
-// DISPARAR LATIGAZO
+// DISPARAR LATIGAZO (Corregido el desplazamiento de píxeles)
         if (Phaser.Input.Keyboard.JustDown(this.teclaEspacio) && (this.body.blocked.down || this.body.touching.down)) {
             this.body.setVelocityX(0); 
             this.estaAtacando = true;
 
-            // Cambiamos a la textura de ataque (112x108 con personaje centrado)
+            // Cambiamos a la textura de ataque (230x108)
             this.setTexture('benedict_attack');
 
-            // --- CONFIGURACIÓN ESTÁNDAR (PERSONAJE CENTRADO) ---
-            // Como ahora el cuerpo está en el centro, el offset es el mismo para ambos lados.
-            // Ajustá el primer número (36) si querés mover la caja un poquito más a la izquierda o derecha.
-            this.body.setSize(40, 95);
-            this.body.setOffset(36, 13); 
+            // --- SOLUCIÓN AL DESPLAZAMIENTO ---
+            // Como el lienzo de ataque es más ancho (230px), movemos el origen 
+            // para que el cuerpo de Benedict se quede exactamente en el mismo lugar que en la caminata.
+            if (this.flipX) {
+                // Mirando a la izquierda: el cuerpo se mantiene en su sitio moviendo el origen a la derecha
+                this.setOrigin(0.8, 0.5);
+                this.body.setSize(40, 95);
+                this.body.setOffset(145, 13); 
+            } else {
+                // Mirando a la derecha: el cuerpo se mantiene en su sitio moviendo el origen a la izquierda
+                this.setOrigin(0.2, 0.5);
+                this.body.setSize(40, 95);
+                this.body.setOffset(45, 13); 
+            }
 
             this.anims.play('latigazo_benedict');
 
-            // Frame 3 real (index 2) para el golpe
+            // Frame 3 real (index 2) para el golpe (Caja extendida opcional para el látigo)
             this.on('animationupdate', (anim, frame) => {
                 if (anim.key === 'latigazo_benedict' && frame.index === 2) {
-                    console.log("¡GOLPE! Látigo estirado en el centro.");
+                    if (this.flipX) {
+                        this.body.setSize(120, 95);
+                        this.body.setOffset(65, 13); // Estira la caja hacia la izquierda
+                    } else {
+                        this.body.setSize(120, 95);
+                        this.body.setOffset(45, 13); // Estira la caja hacia la derecha
+                    }
                 }
             });
 
-            // Al terminar, volvemos al estado de caminata sin sacudidas
+            // Al terminar, volvemos al estado de caminata original sin sacudidas
             this.once('animationcomplete', (anim) => {
                 if (anim.key === 'latigazo_benedict') {
+                    // Restauramos el origen clásico al centro perfecto (0.5, 0.5) antes de la textura
+                    this.setOrigin(0.5, 0.5);
                     this.setTexture('benedict_walk');
                     
-                    // Volvemos a la caja normal de caminata
+                    // Volvemos a la caja normal de caminata que ya te andaba bien
                     this.body.setSize(40, 95);  
                     this.body.setOffset(25, 5);
                     
