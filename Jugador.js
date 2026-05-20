@@ -44,7 +44,6 @@ class Jugador extends Phaser.Physics.Arcade.Sprite {
             if (enSuelo) this.anims.play('quieto_benedict', true);
         }
 
-        // 2. EL SALTO (Con tu lógica de parado)
         // SALTO
 if (Phaser.Input.Keyboard.JustDown(this.teclas.up) && enSuelo) {
 
@@ -68,30 +67,32 @@ if (Phaser.Input.Keyboard.JustUp(this.teclas.up)) {
             this.anims.play('quieto_benedict', true);
         }
 
-if (Phaser.Input.Keyboard.JustDown(this.teclaEspacio) && enSuelo) {
+        // 3. NUEVO: DISPARAR LATIGAZO (WHIP)
+        if (Phaser.Input.Keyboard.JustDown(this.teclaEspacio) && enSuelo) {
+            this.body.setVelocityX(0);
+            this.estaAtacando = true;
 
-    this.body.setVelocityX(0);
-    this.estaAtacando = true;
+            this.setTexture('benedict_attack');
+            
+            // Mantenemos el origen 0.5 siempre, así no se cae del borde
+            this.setOrigin(0.5, 0.5); 
 
-    this.x += this.flipX ? -100 : 100;
+            // Solo ajustamos el offset del cuerpo (la cajita verde) 
+            // para que siempre esté alineada con el personaje en la animación
+            this.body.setSize(40, 95);
+            this.body.setOffset(95, 13); // Ajustado para el sprite de 230px
 
-    this.setTexture('benedict_attack');
+            this.anims.play('latigazo_benedict');
 
-    this.anims.play('latigazo_benedict');
-
-    this.once('animationcomplete', (anim) => {
-
-        if (anim.key === 'latigazo_benedict') {
-
-            this.x -= this.flipX ? -100 : 100;
-
-            this.setTexture('benedict_walk');
-
-            this.estaAtacando = false;
-        }
-
-    });
-
+            this.once('animationcomplete', (anim) => {
+                if (anim.key === 'latigazo_benedict') {
+                    this.setTexture('benedict_walk');
+                    this.body.setSize(40, 95);  
+                    this.body.setOffset(25, 5); // Volvemos a la caja de caminata
+                    this.estaAtacando = false;
+                }
+            });
+        
 
             this.anims.play('latigazo_benedict');
 
