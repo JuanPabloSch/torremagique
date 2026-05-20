@@ -67,71 +67,34 @@ if (Phaser.Input.Keyboard.JustUp(this.teclas.up)) {
             this.anims.play('quieto_benedict', true);
         }
 
-        // 3. NUEVO: DISPARAR LATIGAZO (WHIP)
-        if (Phaser.Input.Keyboard.JustDown(this.teclaEspacio) && enSuelo) {
-            this.body.setVelocityX(0);
-            this.estaAtacando = true;
-
-            this.setTexture('benedict_attack');
-            
-            // Mantenemos el origen 0.5 siempre, así no se cae del borde
-            this.setOrigin(0.5, 0.5); 
-
-            // Solo ajustamos el offset del cuerpo (la cajita verde) 
-            // para que siempre esté alineada con el personaje en la animación
-            this.body.setSize(40, 95);
-            this.body.setOffset(95, 13); // Ajustado para el sprite de 230px
-            this.x += this.flipX ? -80 : 80;
-            this.anims.play('latigazo_benedict');
-
-            this.once('animationcomplete', (anim) => {
-                if (anim.key === 'latigazo_benedict') {
-                    this.x -= this.flipX ? -80 : 80;
-                    this.setTexture('benedict_walk');
-                    this.body.setSize(40, 95);  
-                    this.body.setOffset(25, 5); // Volvemos a la caja de caminata
-                    this.estaAtacando = false;
-                }
-            });
-        
-            
-            this.anims.play('latigazo_benedict');
-
-    // 3. NUEVO: DISPARAR LATIGAZO (WHIP)
+        // 3. LATIGAZO
 if (Phaser.Input.Keyboard.JustDown(this.teclaEspacio) && enSuelo) {
+
     this.body.setVelocityX(0);
+
     this.estaAtacando = true;
 
+    // Ajuste visual horizontal
+    this.x += this.flipX ? -80 : 80;
+
     this.setTexture('benedict_attack');
-    
-    // Mantenemos el offset fijo para que no salte el personaje
-    // Ajustá estos valores si ves que el personaje se desplaza al atacar
-    const offsetAtaqueX = this.flipX ? 45 : 95; 
-    this.body.setSize(40, 95);
-    this.body.setOffset(offsetAtaqueX, 13); 
 
     this.anims.play('latigazo_benedict');
 
-    // Usamos 'animationupdate' solo para detectar el momento del golpe, 
-    // PERO sin cambiar el tamaño de la caja para evitar que se caiga.
-    this.on('animationupdate', (anim, frame) => {
-        if (anim.key === 'latigazo_benedict' && frame.index === 3) {
-            // Solo activamos la hitbox de golpe aquí, pero mantenemos el ancho del cuerpo
-            // Si necesitas detectar el golpe, usá otra variable (ej: this.estaGolpeando = true)
+    this.once('animationcomplete', (anim) => {
+
+        if (anim.key === 'latigazo_benedict') {
+
+            // Volver a posición original
+            this.x -= this.flipX ? -80 : 80;
+
+            this.setTexture('benedict_walk');
+
+            this.estaAtacando = false;
         }
+
     });
 
-    this.once('animationcomplete', (anim) => {
-        if (anim.key === 'latigazo_benedict') {
-            this.setTexture('benedict_walk');
-            this.body.setSize(40, 95);  
-            this.body.setOffset(25, 5); // Volvemos a la caja de caminata original
-            
-            this.estaAtacando = false;
-            this.off('animationupdate');
-        }
-    });
-}
 }
 }
 }   
