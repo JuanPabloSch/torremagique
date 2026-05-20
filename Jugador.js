@@ -62,8 +62,12 @@ class Jugador extends Phaser.Physics.Arcade.Sprite {
 
         }
         if (!enSuelo) {
-            this.anims.play('quieto_benedict', true);
-        }
+
+        this.anims.stop();
+
+        this.setFrame(2);
+
+    }
 
         // 3. LATIGAZO
 if (Phaser.Input.Keyboard.JustDown(this.teclaEspacio) && enSuelo) {
