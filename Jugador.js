@@ -45,10 +45,24 @@ class Jugador extends Phaser.Physics.Arcade.Sprite {
         }
 
         // 2. EL SALTO (Con tu lógica de parado)
-        if (this.teclas.up.isDown && enSuelo) {
-            this.body.setVelocityY(-650); 
-            this.anims.play('quieto_benedict', true);
-        }
+        // SALTO
+if (Phaser.Input.Keyboard.JustDown(this.teclas.up) && enSuelo) {
+
+    this.body.setVelocityY(-650);
+
+    this.anims.play('quieto_benedict', true);
+}
+
+// SALTO SENSITIVO
+if (Phaser.Input.Keyboard.JustUp(this.teclas.up)) {
+
+    // Si todavía está subiendo, cortamos el salto
+    if (this.body.velocity.y < -200) {
+
+        this.body.setVelocityY(-200);
+
+    }
+}
 
         if (!enSuelo) {
             this.anims.play('quieto_benedict', true);
