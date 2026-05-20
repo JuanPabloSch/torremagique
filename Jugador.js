@@ -54,32 +54,30 @@ class Jugador extends Phaser.Physics.Arcade.Sprite {
             this.anims.play('quieto_benedict', true);
         }
 
-        // 3. NUEVO: DISPARAR LATIGAZO (WHIP)
-        if (Phaser.Input.Keyboard.JustDown(this.teclaEspacio) && enSuelo) {
-            this.body.setVelocityX(0);
-            this.estaAtacando = true;
+if (Phaser.Input.Keyboard.JustDown(this.teclaEspacio) && enSuelo) {
 
-            this.setTexture('benedict_attack');
-            
-            // Mantenemos el origen 0.5 siempre, así no se cae del borde
-            this.setOrigin(0.5, 0.5); 
+    this.body.setVelocityX(0);
+    this.estaAtacando = true;
 
-            // Solo ajustamos el offset del cuerpo (la cajita verde) 
-            // para que siempre esté alineada con el personaje en la animación
-            this.body.setSize(40, 95);
-            this.body.setOffset(95, 13); // Ajustado para el sprite de 230px
+    this.x += this.flipX ? -100 : 100;
 
-            this.anims.play('latigazo_benedict');
+    this.setTexture('benedict_attack');
 
-            this.once('animationcomplete', (anim) => {
-                if (anim.key === 'latigazo_benedict') {
-                    this.setTexture('benedict_walk');
-                    this.body.setSize(40, 95);  
-                    this.body.setOffset(25, 5); // Volvemos a la caja de caminata
-                    this.estaAtacando = false;
-                }
-            });
-        
+    this.anims.play('latigazo_benedict');
+
+    this.once('animationcomplete', (anim) => {
+
+        if (anim.key === 'latigazo_benedict') {
+
+            this.x -= this.flipX ? -100 : 100;
+
+            this.setTexture('benedict_walk');
+
+            this.estaAtacando = false;
+        }
+
+    });
+
 
             this.anims.play('latigazo_benedict');
 
