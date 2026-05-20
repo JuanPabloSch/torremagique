@@ -45,24 +45,22 @@ class Jugador extends Phaser.Physics.Arcade.Sprite {
         }
 
         // SALTO
-if (Phaser.Input.Keyboard.JustDown(this.teclas.up) && enSuelo) {
+        if (Phaser.Input.Keyboard.JustDown(this.teclas.up) && enSuelo) {
 
-    this.body.setVelocityY(-650);
+            this.body.setVelocityY(-550);
 
-    this.anims.play('quieto_benedict', true);
-}
+        }
 
-// SALTO SENSITIVO
-if (Phaser.Input.Keyboard.JustUp(this.teclas.up)) {
+        // SALTO SENSITIVO
+        if (Phaser.Input.Keyboard.JustUp(this.teclas.up)) {
 
-    // Si todavía está subiendo, cortamos el salto
-    if (this.body.velocity.y < -200) {
+            if (this.body.velocity.y < -200) {
 
-        this.body.setVelocityY(-200);
+                this.body.setVelocityY(-200);
 
-    }
-}
+            }
 
+        }
         if (!enSuelo) {
             this.anims.play('quieto_benedict', true);
         }
