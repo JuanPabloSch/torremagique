@@ -81,11 +81,12 @@ if (Phaser.Input.Keyboard.JustUp(this.teclas.up)) {
             // para que siempre esté alineada con el personaje en la animación
             this.body.setSize(40, 95);
             this.body.setOffset(95, 13); // Ajustado para el sprite de 230px
-
+            this.x += this.flipX ? -80 : 80;
             this.anims.play('latigazo_benedict');
 
             this.once('animationcomplete', (anim) => {
                 if (anim.key === 'latigazo_benedict') {
+                    this.x -= this.flipX ? -80 : 80;
                     this.setTexture('benedict_walk');
                     this.body.setSize(40, 95);  
                     this.body.setOffset(25, 5); // Volvemos a la caja de caminata
@@ -93,7 +94,7 @@ if (Phaser.Input.Keyboard.JustUp(this.teclas.up)) {
                 }
             });
         
-
+            
             this.anims.play('latigazo_benedict');
 
     // 3. NUEVO: DISPARAR LATIGAZO (WHIP)
